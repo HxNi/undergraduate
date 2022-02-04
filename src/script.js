@@ -1,16 +1,17 @@
-//wasmpack('fact.wasm', 0xAA);
-let main_wasm = wasmunpack('main.wasp', 0xBD);
+//wasmpack('wa/add.wasm', 0xBD);
+//wasmpack('wa/fac.wasm', 0xAA);
+let main_wasm = wasmunpack('wa/add.wasp', 0xBD);
 wasmexec(main_wasm, aa);
 wasmexec(main_wasm, a);
-let fact_wasm = wasmunpack('fact.wasp', 0xAA);
+let fact_wasm = wasmunpack('wa/fac.wasp', 0xAA);
 wasmexec(fact_wasm, b);
 
 function a(obj){
-    console.log(obj.addTwoa(10, 20));
+    console.log(obj.addTwo(10, 20));
 }
 
 function aa(obj){
-    console.log(obj.addTwoa(10, 23));
+    console.log(obj.addTwo(10, 23));
 }
 
 function b(obj){
