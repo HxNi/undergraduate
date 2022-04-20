@@ -1,50 +1,56 @@
 // [pack/unpack API]
 // pack wrapper from remote input
-function wasmpack(file, keyvalue) {
+function wasmpackInput(file, keyvalue, afterAction=null) {
     let reader = new FileReader();
-    let filename = file.name.substring(0, file.name.lastIndexOf("."));
+    let filename = getFilenameFromInput(file);
     reader.onload = function() {
+        // [2] get file contents
         let contents = new Uint8Array(reader.result);
+        
+        // *DEBUG*
         //contents = new TextEncoder("utf-8").encode(contents);
-        pack(contents, keyvalue);
-        save(contents, filename);
+
+        insideWasmpackInput(contents, keyvalue);
+        if (afterAction != null) afterAction(contents, filename);
     };
+    // [1] read file
     reader.readAsArrayBuffer(file);
 }
 
-function wasmpackFetch(filepath, keyvalue) {
-    let filename = filepath.substring(filepath.lastIndexOf("/") + 1, filepath.lastIndexOf("."));
-    fetch(filepath).then(res => {
-        let promise = res.body.getReader().read();
-        promise
-        .then(res => packFetch(res, keyvalue))
-        .then(res => saveFetch(res, filename)); // (optional) for saving packed file
+function wasmpackFetch(file, keyvalue, afterAction=null) {
+    let filename = getFilenameFromFetch(file);
+    fetch(file).then(res => {
+        if (afterAction != null)
+            res.body.getReader().read()
+            .then(res => insideWasmpackFetch(res, keyvalue))
+            .then(res => afterAction(res, filename));
+        else
+            res.body.getReader().read()
+            .then(res => insideWasmpackFetch(res, keyvalue))
     });
 }
 
 // unpack wrapper
-function wasmunpack(file, keyvalue) {
+function wasmunpackInput(file, keyvalue) {
     let reader = new FileReader();
     let trigger = false;
-    let filename = file.name.substring(0, file.name.lastIndexOf("."));
+    let filename = getFilenameFromInput(file);
     let promise = new Promise(function(res) {
         reader.onload = function() {
             let contents = new Uint8Array(reader.result);
-            unpack(contents, keyvalue);
+            insideWasmunpackInput(contents, keyvalue);
             res(contents);
         }
     });
     reader.readAsArrayBuffer(file);
 
-    document.getElementById('div_call').removeAttribute('hidden');
-    document.getElementById('run_file').innerText = "run " + filename + ".wasm";
-    document.getElementById('run_file').style.color = "blue";
     return promise;
 }
+
 async function wasmunpackFetch(filename, keyvalue) {
     let res = await fetch(filename); // fetch(filename) -> [Response Promise] -> await -> res
     let res2 = await res.body.getReader().read(); // [Promise] res.body.getReader().read() -> await -> res2
-    let res3 = await unpackFetch(res2, keyvalue); // [Promise] res2=unpack(res2, keyvalue) -> await -> res3
+    let res3 = await insideWasmunpackFetch(res2, keyvalue); // [Promise] res2=unpack(res2, keyvalue) -> await -> res3
     let res4 = await wasmloadFetch(res3); // [Promise] res3=instantiate(res3) -> await -> res4:WebAssembly.instantiateStreaming(moduleResponse)
     return res4;
 
@@ -55,72 +61,82 @@ async function wasmunpackFetch(filename, keyvalue) {
 }
 
 // pack
-function pack(c, k) {
-    for (let i = 0; i < c.length; i++) {
-        c[i] ^= k;
-    }
+function insideWasmpackInput(contents, key, mode='xor') {
+    insideWasmpack(contents, key, mode);
 }
 
-function packFetch(s, k) {
-    let c = s.value;
-    for (let i = 0; i < c.length; i++) {
-        c[i] ^= k;
-    }
+function insideWasmpackFetch(s, key, mode='xor') {
+    let contents = s.value;
+    insideWasmpack(contents, key, mode);
     return s;
+}
+
+function insideWasmpack(contents, key, mode='xor') {
+    if (mode == 'xor') {
+        for (let i = 0; i < contents.length; i++) {
+            contents[i] ^= key;
+        }
+    }
 }
 
 // unpack
-function unpack(c, k) {
-    for (let i = 0; i < c.length; i++) {
-        c[i] ^= k;
-    }
-    return c;
+function insideWasmunpackInput(contents, key, mode='xor') {
+    insideWasmunpack(contents, key, mode);
+    return contents;
 }
 
-function unpackFetch(s, k) {
-    let c = s.value;
-    for (let i = 0; i < c.length; i++) {
-        c[i] ^= k;
-    }
+function insideWasmunpackFetch(s, key, mode='xor') {
+    let contents = s.value;
+    insideWasmunpack(contents, key, mode);
     return s;
 }
 
-// [subAPI]
-// make a link to download a wasm file in web
-function save(c, filename) {
-    let file = new Blob([c], {type: 'application/wasm'});
-    var url = URL.createObjectURL(file);
-    var link = document.getElementById('download_file');
-    link.innerText = filename + '.wasp download'; 
-    link.href = url;
-    link.download = filename + '.wasp';
+function insideWasmunpack(contents, key, mode='xor') {
+    if (mode == 'xor') {
+        for (let i = 0; i < contents.length; i++) {
+            contents[i] ^= key;
+        }
+    }
 }
 
-function saveFetch(c, filename) {
-    let file = new Blob([c.value], {type: 'application/wasm'});
-    var url = URL.createObjectURL(file);
-    var link = document.getElementById('download_file');
-    link.innerText = filename + '.wasp download'; 
-    link.href = url;
-    link.download = filename + '.wasp';
+// [util API]
+// [load/execute API]
+function wasmloadInput(file) {
+    return wasmload(file);
 }
 
-function wasmload(file) {
-    let r = new Blob([file], {type: 'application/wasm'});
-    let moduleResponse = new Response(r, {'headers': {'Content-Type': 'application/wasm'}});
-    let module = WebAssembly.instantiateStreaming(moduleResponse);
-
-    return module;
+function wasmloadFetch(s) {
+    return wasmload(s.value);
 }
 
 // instantiate a wasm file
-function wasmloadFetch(s) {
-    let r = new Blob([s.value], {type: 'application/wasm'});
+function wasmload(file) {
+    let r = new Blob([file], {type: 'application/wasm'});
     let moduleResponse = new Response(r, {'headers': {'Content-Type': 'application/wasm'}});
     return WebAssembly.instantiateStreaming(moduleResponse);
 }
 
 // run a wasm file with given function name f
-function wasmexec(s, f) {
-    s.then(obj => f(obj.instance.exports));
+function wasmexec(s, f, afterAction=null) {
+    s.then(obj => {
+        let result;
+        result = f(obj.instance.exports);
+        if (afterAction != null) afterAction(result);
+    });
+}
+
+// [get filename API]
+function getFilenameFromInput(file) {
+    return file.name.substring(0, file.name.lastIndexOf("."));
+}
+
+function getFilenameFromFetch(file) {
+    return file.substring(file.lastIndexOf("/") + 1, file.lastIndexOf("."));
+}
+
+// [URL API]
+function makeURL(contents, filename) {
+    let file = new Blob([contents], {type: 'application/wasm'});
+    var url = URL.createObjectURL(file);
+    return url;
 }

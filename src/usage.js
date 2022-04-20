@@ -1,18 +1,23 @@
-// [example]
+// [Input example]
+// upload_file input tag
 // upload original .wasm file to pack
 document.getElementById('upload_file').addEventListener('input', function() {
-    let link = document.getElementById('upload_file');
-    if (link.files.length == 1) {
-        wasmpack(link.files[0], 0xBD);
+    // if file exists in the input
+    if (this.files.length == 1) {
+        wasmpackInput(this.files[0], 0xBD, makeSavelinkInput);
     }
 });
 
 // load packed .wasp file to unpack
 let load_wasm;
 document.getElementById('load_file').addEventListener('input', async function() {
-    let link = document.getElementById('load_file');
-    if (link.files.length == 1) {
-        let load = await wasmunpack(link.files[0], 0xBD);
+    // if file exists in the input
+    if (this.files.length == 1) {
+        let load = await wasmunpackInput(this.files[0], 0xAA);
+        let filename = this.files[0].name.substring(0, this.files[0].name.lastIndexOf("."));
+        document.getElementById('div_call').removeAttribute('hidden');
+        document.getElementById('run_file').innerText = "call the function in " + filename + ".wasm";
+        document.getElementById('run_file').style.color = "blue";
         load_wasm = wasmload(load);
         
         // wasmexec(load_wasm, function a(obj) {
@@ -38,28 +43,40 @@ document.getElementById('run_file').addEventListener('click', function() {
             document.getElementById('result').innerText = result;
         });
     }
-})
+});
 
-// [example]
+// [Fetch example]
 // pack example
-//wasmpackFetch('wa/add.wasm', 0xBD);
-//wasmpackFetch('wa/fac.wasm', 0xAA);
+wasmpackFetch('wa/add.wasm', 0xBD, makeSavelinkFetch);
+wasmpackFetch('wa/fac.wasm', 0xAA, makeSavelinkFetch);
 
 // unpack example
 let main_wasm = wasmunpackFetch('wa/add.wasp', 0xBD);
-wasmexec(main_wasm, aa);
-wasmexec(main_wasm, a);
+wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 20);}, showResult);
+wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 23);}, showResult);
 let fact_wasm = wasmunpackFetch('wa/fac.wasp', 0xAA);
-wasmexec(fact_wasm, b);
+wasmexec(fact_wasm, (obj) => {return obj.fac(2);}, showResult);
 
-function a(obj){
-    console.log(obj.addTwo(10, 20));
+// make a link to download a wasm file in web
+function makeSavelinkInput(c, filename) {
+    var link = document.getElementById('download_file');
+    link.innerText = filename + '.wasp download'; 
+    link.href = makeURL(c, filename);
+    link.download = filename + '.wasp';
 }
 
-function aa(obj){
-    console.log(obj.addTwo(10, 23));
+function makeSavelinkFetch(c, filename) {
+    var link = document.createElement('a');
+    link.innerText = filename + '.wasp download'; 
+    link.href = makeURL(c, filename);
+    link.download = filename + '.wasp';
+    document.getElementById('fetch_download_file').appendChild(link);
+    document.getElementById('fetch_download_file').innerHTML += " ";
 }
 
-function b(obj){
-    console.log(obj.fac(2)); 
+function showResult(result) {
+    var span = document.createElement('span');
+    span.innerText = result; 
+    document.getElementById('div_fetch_call').appendChild(span);
+    document.getElementById('div_fetch_call').innerHTML += " ";
 }

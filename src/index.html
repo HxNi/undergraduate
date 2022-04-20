@@ -1,14 +1,31 @@
 <!DOCTYPE html>
 <html>
     <head>
-        
+        <title>wasp</title>
     </head>
     <body>
-        pack: <input id="upload_file" type="file" /> <a id="download_file"></a>
+        Input Example
         <br>
-        unpack: <input id="load_file" type="file" /> <span id="div_call" hidden> <a id="run_file" href="#"></a> call: <input id="call" type="text" /> </span>
+        wasp pack> <input id="upload_file" type="file" /> <a id="download_file"></a>
         <br>
-        result: <span id="result"></span>
+        wasp unpack> <input id="load_file" type="file" /> 
+        <br>
+        wasm run>
+        <span id="div_call" hidden>
+            <br>
+            function call: <input id="call" type="text" />
+            <a id="run_file" href="#"></a>
+            <br>
+            result: <span id="result"></span>
+        </span>
+        <br>
+        <hr>
+        Fetch Example
+        <br>
+        wasp pack> <span id="fetch_download_file"></span>
+        <br>
+        wasp run> <p id="div_fetch_call"></p>
+
         <script src="wasp.js"></script>
         <script src="usage.js"></script>
     </body>
