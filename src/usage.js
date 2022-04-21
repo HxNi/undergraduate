@@ -14,12 +14,12 @@ let load_wasm;
 document.getElementById('load_file').addEventListener('input', async function() {
     // if file exists in the input
     if (this.files.length == 1) {
-        let load = await WASP.wasmunpack(this.files[0], 0xAA);
+        let load = await WASP.wasmunpackInput(this.files[0], 0xAA);
         let filename = this.files[0].name.substring(0, this.files[0].name.lastIndexOf("."));
         document.getElementById('div_call').removeAttribute('hidden');
         document.getElementById('run_file').innerText = "call the function in " + filename + ".wasm";
         document.getElementById('run_file').style.color = "blue";
-        load_wasm = WASP.wasmload(load);
+        load_wasm = WASU.wasmload(load);
         
         // wasmexec(load_wasm, function a(obj) {
         //     console.log(obj.addTwo(10, 20));
@@ -38,11 +38,7 @@ document.getElementById('run_file').addEventListener('click', function() {
         let param = call_statement.substring(call_statement.lastIndexOf('(') + 1, call_statement.lastIndexOf(')'));
         param = param.split(",")
         param = param.map(a => Number(a));
-        WASP.wasmexec(load_wasm, function a(obj) {
-            let fn = obj[function_name];
-            let result = fn(...param);
-            document.getElementById('result').innerText = result;
-        });
+        WASU.wasmexec(load_wasm, function_name, [...param], (result) => {document.getElementById('result').innerText = result;});
     }
 });
 
@@ -53,10 +49,10 @@ WASP.wasmpackFetch('wa/fac.wasm', 0xAA, makeSavelinkFetch);
 
 // unpack example
 let main_wasm = WASP.wasmunpackFetch('wa/add.wasp', 0xBD);
-WASP.wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 20);}, showResult);
-WASP.wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 23);}, showResult);
+WASU.wasmexec(main_wasm, 'addTwo', [10, 20], showResult);
+WASU.wasmexec(main_wasm, 'addTwo', [10, 23], showResult);
 let fact_wasm = WASP.wasmunpackFetch('wa/fac.wasp', 0xAA);
-WASP.wasmexec(fact_wasm, (obj) => {return obj.fac(2);}, showResult);
+WASU.wasmexec(fact_wasm, 'fac', [2], showResult);
 
 
 // WASO
@@ -67,8 +63,9 @@ document.getElementById('obf_upload_file').addEventListener('input', function() 
     }
 });
 
-WASO.wasmobfFetch('wa/test1.wasm', makeSavelinkWASOFetch);
-
+WASO.wasmobfFetch('wa/test1.wasm', 'hash', makeSavelinkWASOFetch);
+let obf_wasm = WASP.wasmunpackFetch('wa/test1_obf.wasm');
+WASO.wasmexec(obf_wasm, 'addThree', [1, 2, 3], 'hash', showResultWASO);
 
 
 
@@ -76,18 +73,16 @@ WASO.wasmobfFetch('wa/test1.wasm', makeSavelinkWASOFetch);
 function makeSavelinkInput(c, filename) {
     var link = document.getElementById('download_file');
     link.innerText = filename + '.wasp download';
-    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
-    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
-    else console.log("import WASP or WASO");
+    if (typeof WASU != 'undefined') link.href = WASU.makeURL(c, filename);
+    else console.log("import WASU");
     link.download = filename + '.wasp';
 }
 
 function makeSavelinkFetch(c, filename) {
     var link = document.createElement('a');
     link.innerText = filename + '.wasp download'; 
-    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
-    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
-    else console.log("import WASP or WASO");
+    if (typeof WASU != 'undefined') link.href = WASU.makeURL(c, filename);
+    else console.log("import WASU");
     link.download = filename + '.wasp';
     document.getElementById('fetch_download_file').appendChild(link);
     document.getElementById('fetch_download_file').innerHTML += " ";
@@ -103,10 +98,16 @@ function showResult(result) {
 function makeSavelinkWASOFetch(c, filename) {
     var link = document.createElement('a');
     link.innerText = filename + '_obf.wasm download'; 
-    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
-    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
-    else console.log("import WASP or WASO");
+    if (typeof WASU != 'undefined') link.href = WASU.makeURL(c, filename);
+    else console.log("import WASU");
     link.download = filename + '_obf.wasm';
     document.getElementById('WASO_fetch_download_file').appendChild(link);
     document.getElementById('WASO_fetch_download_file').innerHTML += " ";
+}
+
+function showResultWASO(result) {
+    var span = document.createElement('span');
+    span.innerText = result; 
+    document.getElementById('div_fetch_call_WASO').appendChild(span);
+    document.getElementById('div_fetch_call_WASO').innerHTML += " ";
 }
