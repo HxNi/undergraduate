@@ -31,6 +31,8 @@ WASO.wasmobf = function (contents, mode) {
     if (!(new Uint8Array([0x00, 0x61, 0x73, 0x6d]).every((value, index) => value == contents[index]))) return;
     // check wasm version is 1
     if (!(new Uint8Array([0x01, 0x00, 0x00, 0x00]).every((value, index) => value == contents[index+4]))) return;
+    
+    // Obfuscate Export Function Name
     let offset = 8;
     let found = false;
     while (offset < contents.length) {
@@ -42,7 +44,30 @@ WASO.wasmobf = function (contents, mode) {
         // 2 = 1 for section code space + 1 for section length space
         offset += contents[offset+1] + 2;
     }
-    if (!found) return;
+    if (found) contents = WASO.wasmobfName(contents, offset, mode);
+    
+    // Remove Name Section
+    offset = 8;
+    found = false;
+    while (offset < contents.length) {
+        // check section code is Custom section(0x00)
+        if (contents[offset] == 0x00) {
+            // check section is Name section
+            if (contents[offset+2] == 0x04) // name length
+                if (new Uint8Array([0x6e, 0x61, 0x6d, 0x65]).every((value, index) => value == contents[offset+3+index])) { // section name 'name'
+                    found = true;
+                    break;
+                }
+        }
+        // 2 = 1 for section code space + 1 for section length space
+        offset += contents[offset+1] + 2;
+    }
+    if (found) contents = WASO.wasmobfNameSection(contents, offset, mode);
+
+    return new Uint8Array(contents);
+};
+
+WASO.wasmobfName = function (contents, offset, mode) {
     let sectionSize = contents[offset + 1];
     let numExports = contents[offset + 2];
     let exportSectionOffset = offset + 3;
@@ -55,7 +80,7 @@ WASO.wasmobf = function (contents, mode) {
 
         let name = contents.slice((exportOffset+1), (exportOffset+1)+nameSize);
         let nameString = WASU.convertArrayToString(name);
-        let obfnameString = WASO.wasmobfName(nameString, mode);
+        let obfnameString = WASO.insideWasmobfName(nameString, mode);
         let obfname = WASU.convertStringToArray(obfnameString);
         newExportSection.push(obfname.length);
         newExportSection.push(...obfname);
@@ -68,12 +93,12 @@ WASO.wasmobf = function (contents, mode) {
     newExportSection.unshift(numExports);
     newExportSection.unshift(newExportSection.length);
     newExportSection.unshift(0x07);
-    let newWasm = [...contents.slice(0, offset), ...newExportSection, ...contents.slice(offset + 2 + sectionSize)];
+    let newContents = [...contents.slice(0, offset), ...newExportSection, ...contents.slice(offset + 2 + sectionSize)];
 
-    return new Uint8Array(newWasm);
-};
+    return newContents;
+}
 
-WASO.wasmobfName = function (str, mode='hash') {
+WASO.insideWasmobfName = function (str, mode='hash') {
     if (mode == 'hash') {
         if (typeof CryptoJS == null) {
             console.log("import CryptoJS");
@@ -83,6 +108,15 @@ WASO.wasmobfName = function (str, mode='hash') {
         return hash.slice(0, 8);
         // use Crypto module for Node.js
     }
+};
+
+WASO.wasmobfNameSection = function (contents, offset, mode) {
+    let sectionSize = contents[offset+1];
+    let beforeSection = contents.slice(0, offset);
+    let afterSection = contents.slice(offset+2 + sectionSize);
+    let newContents = [...beforeSection, ...afterSection];
+    
+    return newContents;
 };
 
 WASO.wasmFetch = async function (filename, keyvalue) {
@@ -100,7 +134,7 @@ WASO.wasmFetch = async function (filename, keyvalue) {
 
 WASO.wasmdeobf = function (str, mode='hash') {
     if (mode == 'hash') {
-        return WASO.wasmobfName(str, 'hash');
+        return WASO.insideWasmobfName(str, 'hash');
     }
 };
 
@@ -108,9 +142,7 @@ WASO.wasmdeobf = function (str, mode='hash') {
 // [load/execute API]
 // instantiate a wasm file
 WASO.wasmload = function (file) {
-    let r = new Blob([file], {type: 'application/wasm'});
-    let moduleResponse = new Response(r, {'headers': {'Content-Type': 'application/wasm'}});
-    return WebAssembly.instantiateStreaming(moduleResponse);
+    return WASU.wasmload(file);
 };
 
 // run a wasm file with given function name f
