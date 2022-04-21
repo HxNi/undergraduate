@@ -4,29 +4,39 @@
         <title>wasp</title>
     </head>
     <body>
-        Input Example
-        <br>
-        wasp pack> <input id="upload_file" type="file" /> <a id="download_file"></a>
-        <br>
-        wasp unpack> <input id="load_file" type="file" /> 
-        <br>
-        wasm run>
-        <span id="div_call" hidden>
+        <div id="wasp">
+            Input Example
             <br>
-            function call: <input id="call" type="text" />
-            <a id="run_file" href="#"></a>
+            wasp pack> <input id="upload_file" type="file" /> <a id="download_file"></a>
             <br>
-            result: <span id="result"></span>
-        </span>
-        <br>
+            wasp unpack> <input id="load_file" type="file" /> 
+            <br>
+            wasm run>
+            <span id="div_call" hidden>
+                <br>
+                function call: <input id="call" type="text" />
+                <a id="run_file" href="#"></a>
+                <br>
+                result: <span id="result"></span>
+            </span>
+            <br>
+            <hr>
+            Fetch Example
+            <br>
+            wasp pack> <span id="fetch_download_file"></span>
+            <br>
+            wasp run> <p id="div_fetch_call"></p>
+        </div>
         <hr>
-        Fetch Example
-        <br>
-        wasp pack> <span id="fetch_download_file"></span>
-        <br>
-        wasp run> <p id="div_fetch_call"></p>
-
+        <hr>
+        <div id="waso">
+            wasp obf> <input id="obf_upload_file" type="file" />
+            <hr>
+            wasp obf> <span id="WASO_fetch_download_file"></span>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
         <script src="wasp.js"></script>
+        <script src="waso.js"></script>
         <script src="usage.js"></script>
     </body>
 </html>

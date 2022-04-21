@@ -1,10 +1,11 @@
+// WASP
 // [Input example]
 // upload_file input tag
 // upload original .wasm file to pack
 document.getElementById('upload_file').addEventListener('input', function() {
     // if file exists in the input
     if (this.files.length == 1) {
-        wasmpackInput(this.files[0], 0xBD, makeSavelinkInput);
+        WASP.wasmpackInput(this.files[0], 0xBD, makeSavelinkInput);
     }
 });
 
@@ -13,12 +14,12 @@ let load_wasm;
 document.getElementById('load_file').addEventListener('input', async function() {
     // if file exists in the input
     if (this.files.length == 1) {
-        let load = await wasmunpackInput(this.files[0], 0xAA);
+        let load = await WASP.wasmunpack(this.files[0], 0xAA);
         let filename = this.files[0].name.substring(0, this.files[0].name.lastIndexOf("."));
         document.getElementById('div_call').removeAttribute('hidden');
         document.getElementById('run_file').innerText = "call the function in " + filename + ".wasm";
         document.getElementById('run_file').style.color = "blue";
-        load_wasm = wasmload(load);
+        load_wasm = WASP.wasmload(load);
         
         // wasmexec(load_wasm, function a(obj) {
         //     console.log(obj.addTwo(10, 20));
@@ -37,7 +38,7 @@ document.getElementById('run_file').addEventListener('click', function() {
         let param = call_statement.substring(call_statement.lastIndexOf('(') + 1, call_statement.lastIndexOf(')'));
         param = param.split(",")
         param = param.map(a => Number(a));
-        wasmexec(load_wasm, function a(obj) {
+        WASP.wasmexec(load_wasm, function a(obj) {
             let fn = obj[function_name];
             let result = fn(...param);
             document.getElementById('result').innerText = result;
@@ -47,28 +48,46 @@ document.getElementById('run_file').addEventListener('click', function() {
 
 // [Fetch example]
 // pack example
-wasmpackFetch('wa/add.wasm', 0xBD, makeSavelinkFetch);
-wasmpackFetch('wa/fac.wasm', 0xAA, makeSavelinkFetch);
+WASP.wasmpackFetch('wa/add.wasm', 0xBD, makeSavelinkFetch);
+WASP.wasmpackFetch('wa/fac.wasm', 0xAA, makeSavelinkFetch);
 
 // unpack example
-let main_wasm = wasmunpackFetch('wa/add.wasp', 0xBD);
-wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 20);}, showResult);
-wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 23);}, showResult);
-let fact_wasm = wasmunpackFetch('wa/fac.wasp', 0xAA);
-wasmexec(fact_wasm, (obj) => {return obj.fac(2);}, showResult);
+let main_wasm = WASP.wasmunpackFetch('wa/add.wasp', 0xBD);
+WASP.wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 20);}, showResult);
+WASP.wasmexec(main_wasm, (obj) => {return obj.addTwo(10, 23);}, showResult);
+let fact_wasm = WASP.wasmunpackFetch('wa/fac.wasp', 0xAA);
+WASP.wasmexec(fact_wasm, (obj) => {return obj.fac(2);}, showResult);
+
+
+// WASO
+document.getElementById('obf_upload_file').addEventListener('input', function() {
+    // if file exists in the input
+    if (this.files.length == 1) {
+        WASO.wasmobfInput(this.files[0], makeSavelinkInput);
+    }
+});
+
+WASO.wasmobfFetch('wa/test1.wasm', makeSavelinkWASOFetch);
+
+
+
 
 // make a link to download a wasm file in web
 function makeSavelinkInput(c, filename) {
     var link = document.getElementById('download_file');
-    link.innerText = filename + '.wasp download'; 
-    link.href = makeURL(c, filename);
+    link.innerText = filename + '.wasp download';
+    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
+    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
+    else console.log("import WASP or WASO");
     link.download = filename + '.wasp';
 }
 
 function makeSavelinkFetch(c, filename) {
     var link = document.createElement('a');
     link.innerText = filename + '.wasp download'; 
-    link.href = makeURL(c, filename);
+    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
+    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
+    else console.log("import WASP or WASO");
     link.download = filename + '.wasp';
     document.getElementById('fetch_download_file').appendChild(link);
     document.getElementById('fetch_download_file').innerHTML += " ";
@@ -79,4 +98,15 @@ function showResult(result) {
     span.innerText = result; 
     document.getElementById('div_fetch_call').appendChild(span);
     document.getElementById('div_fetch_call').innerHTML += " ";
+}
+
+function makeSavelinkWASOFetch(c, filename) {
+    var link = document.createElement('a');
+    link.innerText = filename + '_obf.wasm download'; 
+    if (typeof WASP != 'undefined') link.href = WASP.makeURL(c, filename);
+    else if (typeof WASO != 'undefined') link.href = WASO.makeURL(c, filename);
+    else console.log("import WASP or WASO");
+    link.download = filename + '_obf.wasm';
+    document.getElementById('WASO_fetch_download_file').appendChild(link);
+    document.getElementById('WASO_fetch_download_file').innerHTML += " ";
 }
