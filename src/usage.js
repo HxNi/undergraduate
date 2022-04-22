@@ -1,11 +1,11 @@
 // WASP
-// [Input example]
+// [1] WASP Input example
 // upload_file input tag
 // upload original .wasm file to pack
 document.getElementById('upload_file').addEventListener('input', function() {
     // if file exists in the input
     if (this.files.length == 1) {
-        WASP.wasmpackInput(this.files[0], 0xBD, makeSavelinkInput);
+        WASP.wasmpackInput(this.files[0], 'xor', 0xBD, makeSavelinkInput);
     }
 });
 
@@ -14,7 +14,7 @@ let load_wasm;
 document.getElementById('load_file').addEventListener('input', async function() {
     // if file exists in the input
     if (this.files.length == 1) {
-        let load = await WASP.wasmunpackInput(this.files[0], 0xAA);
+        let load = await WASP.wasmunpackInput(this.files[0], 'xor', 0xAA);
         let filename = this.files[0].name.substring(0, this.files[0].name.lastIndexOf("."));
         document.getElementById('div_call').removeAttribute('hidden');
         document.getElementById('run_file').innerText = "call the function in " + filename + ".wasm";
@@ -42,20 +42,21 @@ document.getElementById('run_file').addEventListener('click', function() {
     }
 });
 
-// [Fetch example]
+// [2] WASP Fetch example
 // pack example
-WASP.wasmpackFetch('wa/add.wasm', 0xBD, makeSavelinkFetch);
-WASP.wasmpackFetch('wa/fac.wasm', 0xAA, makeSavelinkFetch);
+WASP.wasmpackFetch('wa/add.wasm', 'xor', 0xBD, makeSavelinkFetch);
+WASP.wasmpackFetch('wa/fac.wasm', 'xor', 0xAA, makeSavelinkFetch);
 
 // unpack example
-let main_wasm = WASP.wasmunpackFetch('wa/add.wasp', 0xBD);
+let main_wasm = WASP.wasmunpackFetch('wa/add.wasp', 'xor', 0xBD);
 WASU.wasmexec(main_wasm, 'addTwo', [10, 20], showResult);
 WASU.wasmexec(main_wasm, 'addTwo', [10, 23], showResult);
-let fact_wasm = WASP.wasmunpackFetch('wa/fac.wasp', 0xAA);
+let fact_wasm = WASP.wasmunpackFetch('wa/fac.wasp', 'xor', 0xAA);
 WASU.wasmexec(fact_wasm, 'fac', [2], showResult);
 
 
 // WASO
+// [3] WASO Input example
 document.getElementById('obf_upload_file').addEventListener('input', function() {
     // if file exists in the input
     if (this.files.length == 1) {
@@ -63,6 +64,7 @@ document.getElementById('obf_upload_file').addEventListener('input', function() 
     }
 });
 
+// [4] WASO Fetch example
 WASO.wasmobfFetch('wa/test1.wasm', 'hash', makeSavelinkWASOFetch);
 let obf_wasm = WASP.wasmunpackFetch('wa/test1_obf.wasm');
 WASO.wasmexec(obf_wasm, 'addThree', [1, 2, 3], 'hash', showResultWASO);

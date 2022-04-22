@@ -2,7 +2,7 @@ let WASP = {};
 
 // [pack/unpack API]
 // pack wrapper from remote input
-WASP.wasmpackInput = function (file, keyvalue, afterAction=null) {
+WASP.wasmpackInput = function (file, mode, keyvalue, afterAction=null) {
     let reader = new FileReader();
     let filename = WASU.getFilenameFromInput(file);
     reader.onload = function() {
@@ -12,35 +12,35 @@ WASP.wasmpackInput = function (file, keyvalue, afterAction=null) {
         // *DEBUG*
         //contents = new TextEncoder("utf-8").encode(contents);
 
-        WASP.insideWasmpack(contents, keyvalue);
+        WASP.insideWasmpack(contents, mode, keyvalue);
         if (afterAction != null) afterAction(contents, filename);
     };
     // [1] read file
     reader.readAsArrayBuffer(file);
 };
 
-WASP.wasmpackFetch = function (file, keyvalue, afterAction=null) {
+WASP.wasmpackFetch = function (file, mode, keyvalue, afterAction=null) {
     let filename = WASU.getFilenameFromFetch(file);
     fetch(file).then(res => {
         if (afterAction != null)
             res.body.getReader().read()
-            .then(res => WASP.insideWasmpack(res.value, keyvalue))
+            .then(res => WASP.insideWasmpack(res.value, mode, keyvalue))
             .then(res => afterAction(res, filename));
         else
             res.body.getReader().read()
-            .then(res => WASP.insideWasmpack(res.value, keyvalue));
+            .then(res => WASP.insideWasmpack(res.value, mode, keyvalue));
     });
 };
 
 // unpack wrapper
-WASP.wasmunpackInput = function (file, keyvalue) {
+WASP.wasmunpackInput = function (file, mode, keyvalue) {
     let reader = new FileReader();
     let trigger = false;
     let filename = WASU.getFilenameFromInput(file);
     let promise = new Promise(function(res) {
         reader.onload = function() {
             let contents = new Uint8Array(reader.result);
-            WASP.insideWasmunpack(contents, keyvalue);
+            WASP.insideWasmunpack(contents, mode, keyvalue);
             res(contents);
         }
     });
@@ -49,10 +49,10 @@ WASP.wasmunpackInput = function (file, keyvalue) {
     return promise;
 };
 
-WASP.wasmunpackFetch = async function (filename, keyvalue) {
+WASP.wasmunpackFetch = async function (filename, mode, keyvalue) {
     let res = await fetch(filename); // fetch(filename) -> [Response Promise] -> await -> res
     let res2 = await res.body.getReader().read(); // [Promise] res.body.getReader().read() -> await -> res2
-    let res3 = await WASP.insideWasmunpack(res2.value, keyvalue); // [Promise] res2=unpack(res2, keyvalue) -> await -> res3
+    let res3 = await WASP.insideWasmunpack(res2.value, mode, keyvalue); // [Promise] res2=unpack(res2, keyvalue) -> await -> res3
     let res4 = await WASU.wasmload(res3); // [Promise] res3=instantiate(res3) -> await -> res4:WebAssembly.instantiateStreaming(moduleResponse)
     return res4;
 
@@ -64,7 +64,7 @@ WASP.wasmunpackFetch = async function (filename, keyvalue) {
 };
 
 // pack
-WASP.insideWasmpack = function (contents, key, mode='xor') {
+WASP.insideWasmpack = function (contents, mode, key) {
     if (mode == 'xor') {
         for (let i = 0; i < contents.length; i++) {
             contents[i] ^= key;
@@ -73,7 +73,7 @@ WASP.insideWasmpack = function (contents, key, mode='xor') {
 };
 
 // unpack
-WASP.insideWasmunpack = function (contents, key, mode='xor') {
+WASP.insideWasmunpack = function (contents, mode, key) {
     if (mode == 'xor') {
         for (let i = 0; i < contents.length; i++) {
             contents[i] ^= key;
